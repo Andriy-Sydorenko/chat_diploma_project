@@ -1,0 +1,28 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 24.4.2  # Use the latest version of black
+    hooks:
+      - id: black
+        language_version: python3.12
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.1.0  # Use the latest version of flake8
+    hooks:
+      - id: flake8
+        language_version: python3.12
+        args: ['--max-line-length=119', '--exclude=.git,build,__pycache__,dist,venv,manage.py,migrations', '--ignore=E203,W503']
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2  # Use the latest version of isort
+    hooks:
+      - id: isort
+        language_version: python3.12
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2  # Use the version of mypy you have installed
+    hooks:
+      - id: mypy
+        args: ["--config-file=pyproject.toml"]
+        additional_dependencies:
+          - "pydantic>=2.9.1"
+          - "sqlalchemy>=2.0.34"

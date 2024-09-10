@@ -16,6 +16,8 @@ sqlalchemy = "^2.0.34"
 mypy = "^1.11.2"
 uvicorn = "^0.30.6"
 pre-commit = "^3.8.0"
+alembic = "^1.13.2"
+psycopg2 = "^2.9.9"
 
 [tool.black]
 line-length = 119
@@ -28,14 +30,16 @@ exclude = '''
   | \.mypy_cache
   | \.tox
   | \.venv
+  | \.alembic
 )/
 '''
 
 [tool.isort]
 profile = "black"
 
-[tool.mypy]
-python_version = "3.12"
-plugins = ["pydantic.mypy", "sqlalchemy.ext.mypy.plugin"]
-disallow_untyped_calls = true
-ignore_missing_imports = true
+#[tool.mypy]
+#python_version = "3.12"
+#exclude = ['alembic/.*']
+#plugins = ["pydantic.mypy", "sqlalchemy.ext.mypy.plugin"]
+#disallow_untyped_calls = true
+#ignore_missing_imports = true

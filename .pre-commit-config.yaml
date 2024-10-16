@@ -10,7 +10,7 @@ repos:
     hooks:
       - id: flake8
         language_version: python3.12
-        args: ['--max-line-length=119', '--exclude=.git,build,__pycache__,dist,venv,alembic', '--ignore=E203,W503']
+        args: ['--max-line-length=119', '--exclude=.git,build,__pycache__,dist,venv,__init__.py,*_.py', '--ignore=E203,W503']
 
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2

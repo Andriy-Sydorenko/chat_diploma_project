@@ -1,12 +1,4 @@
-from sqlalchemy import (
-    Boolean,
-    Column,
-    Integer,
-    LargeBinary,
-    PrimaryKeyConstraint,
-    String,
-    UniqueConstraint,
-)
+from sqlalchemy import Boolean, Column, Integer, LargeBinary, String, UniqueConstraint
 
 from engine import Base
 
@@ -25,7 +17,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
 
     UniqueConstraint("email", name="uq_user_email")
-    PrimaryKeyConstraint("id", name="pk_user_id")
+    UniqueConstraint("nickname", name="uq_user_nickname")
 
     def __repr__(self):
         """Returns string representation of model instance"""

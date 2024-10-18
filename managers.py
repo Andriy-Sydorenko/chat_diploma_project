@@ -12,10 +12,6 @@ class ConnectionManager:
     def disconnect(self, websocket: WebSocket):
         self.active_connections.remove(websocket)
 
-    @staticmethod
-    async def send_personal_message(message: str, websocket: WebSocket) -> None:
-        await websocket.send_text(message)
-
-    async def broadcast(self, message: str) -> None:
+    async def send_message(self, message: str):
         for connection in self.active_connections:
             await connection.send_text(message)

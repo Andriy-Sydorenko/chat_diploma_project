@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import (
     Cookie,
+    Depends,
     FastAPI,
     Query,
     WebSocket,
@@ -10,7 +11,9 @@ from fastapi import (
     status,
 )
 from fastapi.responses import HTMLResponse
+from sqlalchemy.orm import Session
 
+from engine import get_db
 from managers import ConnectionManager
 from test_html_file import html
 
@@ -34,7 +37,7 @@ async def get_cookie_or_token(
 
 
 @app.websocket("/ws/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, client_id: int):
+async def websocket_endpoint(websocket: WebSocket, client_id: int, db: Session = Depends(get_db)):
     await manager.connect(websocket)
     try:
         while True:

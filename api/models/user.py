@@ -1,5 +1,7 @@
-from sqlalchemy import Boolean, Column, Integer, LargeBinary, String, UniqueConstraint
+from sqlalchemy import Boolean, Column, Integer, String, UniqueConstraint
+from sqlalchemy.orm import relationship
 
+from api.models.chat import user_chat_association
 from engine import Base
 
 
@@ -9,7 +11,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True, nullable=False)
     email = Column(String(255), nullable=False, unique=True)
     nickname = Column(String(60), nullable=False)
-    hashed_password = Column(LargeBinary, nullable=False)
+    hashed_password = Column(String, nullable=False)
 
     first_name = Column(String, index=True)
     last_name = Column(String, index=True)
@@ -18,6 +20,8 @@ class User(Base):
 
     UniqueConstraint("email", name="uq_user_email")
     UniqueConstraint("nickname", name="uq_user_nickname")
+
+    chats = relationship("Chat", secondary=user_chat_association, back_populates="participants")
 
     def __repr__(self):
         """Returns string representation of model instance"""

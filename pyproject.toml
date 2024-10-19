@@ -20,6 +20,8 @@ alembic = "^1.13.2"
 psycopg2 = "^2.9.9"
 python-dotenv = "^1.0.1"
 colorlog = "^6.8.2"
+python-jose = "^3.3.0"
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 
 [tool.black]
 line-length = 119

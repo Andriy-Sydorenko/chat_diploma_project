@@ -19,3 +19,11 @@ class EncryptionAlgorithms(str, Enum):
 
     # No Signature
     NONE = "none"
+
+
+class WebSocketActions(str, Enum):
+    REGISTER = "register"
+    LOGIN = "login"
+    LOGOUT = "logout"
+    SEND_MESSAGE = "send_message"
+    ME = "me"

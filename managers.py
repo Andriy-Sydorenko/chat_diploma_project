@@ -9,6 +9,14 @@ class ConnectionManager:
         await websocket.accept()
         self.active_connections.append(websocket)
 
+    @staticmethod
+    async def get_json(websocket: WebSocket):
+        return await websocket.receive_json()
+
+    @staticmethod
+    async def send_json(data: dict, websocket: WebSocket):
+        return await websocket.send_json(data)
+
     def disconnect(self, websocket: WebSocket):
         self.active_connections.remove(websocket)
 

@@ -15,7 +15,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Time should be in minutes
 ACCESS_TOKEN_EXPIRATION_TIME = env.int("ACCESS_TOKEN_EXPIRATION_TIME", 60)
-ENCRYPTION_ALGORITHM = EncryptionAlgorithms.HS256
+ENCRYPTION_ALGORITHM = EncryptionAlgorithms.HS384
 
 try:
     JWT_SECRET = generate_jwt_secret_key(env.int("JWT_RANDOM_BYTES_LENGTH", 64))

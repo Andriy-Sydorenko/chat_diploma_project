@@ -17,10 +17,13 @@ class EncryptionAlgorithms(str, Enum):
     ES384 = "ES384"
     ES512 = "ES512"
 
-    # RSA-PSS (Asymmetric) Algorithms
-    PS256 = "PS256"
-    PS384 = "PS384"
-    PS512 = "PS512"
-
     # No Signature
     NONE = "none"
+
+
+class WebSocketActions(str, Enum):
+    REGISTER = "register"
+    LOGIN = "login"
+    LOGOUT = "logout"
+    SEND_MESSAGE = "send_message"
+    ME = "me"

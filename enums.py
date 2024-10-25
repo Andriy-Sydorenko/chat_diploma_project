@@ -17,10 +17,5 @@ class EncryptionAlgorithms(str, Enum):
     ES384 = "ES384"
     ES512 = "ES512"
 
-    # RSA-PSS (Asymmetric) Algorithms
-    PS256 = "PS256"
-    PS384 = "PS384"
-    PS512 = "PS512"
-
     # No Signature
     NONE = "none"

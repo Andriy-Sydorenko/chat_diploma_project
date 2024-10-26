@@ -1,17 +1,20 @@
 from typing import Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from api.models.user import User
 
 
-def get_user_by_email(db: Session, email: str) -> Optional[User]:
-    return db.query(User).filter(User.email == email).first()
+async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
+    query = select(User).where(User.email == email)
+    result = await db.execute(query)
+    return result.scalars().first()
 
 
-def create_user(db: Session, email: str, nickname: str, hashed_password: str):
+async def create_user(db: AsyncSession, email: str, nickname: str, hashed_password: str):
     db_user = User(email=email, nickname=nickname, hashed_password=hashed_password)
     db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    await db.commit()
+    await db.refresh(db_user)
     return db_user

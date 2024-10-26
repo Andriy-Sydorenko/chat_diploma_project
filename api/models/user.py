@@ -25,7 +25,7 @@ class User(Base):
 
     def __repr__(self):
         """Returns string representation of model instance"""
-        return "<User {full_name!r}>".format(full_name=self.full_name)
+        return "<User {email!r}>".format(email=self.email)
 
     @property
     def full_name(self):

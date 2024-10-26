@@ -1,4 +1,4 @@
-from enums import ResponseStatuses
+from utils.enums import ResponseStatuses
 
 
 class WebSocketException(Exception):

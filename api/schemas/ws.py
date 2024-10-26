@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from enums import ResponseStatuses
+from utils.enums import ResponseStatuses
 
 
 class WebSocketResponseMessage(BaseModel):

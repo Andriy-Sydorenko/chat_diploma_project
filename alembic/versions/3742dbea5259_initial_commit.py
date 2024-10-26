@@ -1,8 +1,8 @@
-"""Initial migration
+"""Initial commit
 
-Revision ID: 7b6ddfa71a14
+Revision ID: 3742dbea5259
 Revises: 
-Create Date: 2024-10-25 20:53:49.699521
+Create Date: 2024-10-26 19:08:29.776240
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '7b6ddfa71a14'
+revision: str = '3742dbea5259'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -28,6 +28,13 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_chats_id'), 'chats', ['id'], unique=False)
+    op.create_table('token_blacklist',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('token', sa.String(), nullable=False),
+    sa.Column('blacklisted_at', sa.DateTime(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_token_blacklist_id'), 'token_blacklist', ['id'], unique=False)
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('email', sa.String(length=255), nullable=False),
@@ -72,6 +79,8 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_users_id'), table_name='users')
     op.drop_index(op.f('ix_users_first_name'), table_name='users')
     op.drop_table('users')
+    op.drop_index(op.f('ix_token_blacklist_id'), table_name='token_blacklist')
+    op.drop_table('token_blacklist')
     op.drop_index(op.f('ix_chats_id'), table_name='chats')
     op.drop_table('chats')
     # ### end Alembic commands ###

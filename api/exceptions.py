@@ -1,3 +1,6 @@
+from utils.enums import ResponseStatuses
+
+
 class WebSocketException(Exception):
     def __init__(self, detail: str, action: str = None, data: dict = None):
         self.detail = detail
@@ -5,7 +8,11 @@ class WebSocketException(Exception):
         self.data = data or {}
 
     def to_dict(self):
-        return {"status": "error", "action": self.action, "error": {"detail": self.detail, "data": self.data}}
+        return {
+            "status": ResponseStatuses.ERROR,
+            "action": self.action,
+            "error": {"detail": self.detail, "data": self.data},
+        }
 
 
 class WebSocketAuthenticationException(WebSocketException):

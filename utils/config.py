@@ -1,17 +1,15 @@
-import os
-
 from dotenv import load_dotenv
 
-from enums import EncryptionAlgorithms
-from env_parser import EnvParser
-from logging_config import logger
-from utils import generate_jwt_secret_key
+from utils.enums import EncryptionAlgorithms
+from utils.env_parser import EnvParser
+from utils.logging_config import logger
+from utils.utils import generate_jwt_secret_key
 
 load_dotenv()
 
 env = EnvParser()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = env.str("DATABASE_URL")
 
 # Time should be in minutes
 ACCESS_TOKEN_EXPIRATION_TIME = env.int("ACCESS_TOKEN_EXPIRATION_TIME", 60)

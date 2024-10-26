@@ -1,6 +1,6 @@
 from fastapi import Depends
 from jwt import PyJWTError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import (
     blacklist_token,
@@ -13,18 +13,19 @@ from api.auth import (
 )
 from api.crud.user import create_user, get_user_by_email
 from api.exceptions import WebSocketValidationException
-from api.schemas.user import LoginForm, UserCreate
+from api.schemas.auth import AuthResponse, LoginData, RegisterData
+from api.schemas.user import LoginForm, MeSchema, UserCreate
 from engine import get_db
-from enums import WebSocketActions
+from utils.enums import WebSocketActions
 
 
-def check_blacklisted_token(action: str, db: Session, token: str):
-    if is_token_blacklisted(db, token):
+async def check_blacklisted_token(action: str, db: AsyncSession, token: str):
+    if await is_token_blacklisted(db, token):
         raise WebSocketValidationException(detail="Token is blacklisted", action=action)
 
 
-async def register(user_create: UserCreate, db: Session):
-    db_user = get_user_by_email(db, user_create.email)
+async def register(user_create: UserCreate, db: AsyncSession):
+    db_user = await get_user_by_email(db, user_create.email)
     if db_user:
         raise WebSocketValidationException(
             detail="This account is already registered!",
@@ -32,14 +33,19 @@ async def register(user_create: UserCreate, db: Session):
         )
 
     hashed_password = get_password_hash(user_create.password)
-    create_user(db, user_create.email, user_create.nickname, hashed_password)
+    await create_user(db, user_create.email, user_create.nickname, hashed_password)
 
     access_token = create_jwt_token(user_create.email)
-    return {"data": {"message": "User created successfully", "access_token": access_token, "token_type": "bearer"}}
+    return AuthResponse(
+        data=RegisterData(
+            access_token=access_token,
+            token_type="bearer",
+        )
+    )
 
 
-async def login(login_form: LoginForm, db: Session):
-    user = verify_user(db, login_form.email, login_form.password)
+async def login(login_form: LoginForm, db: AsyncSession):
+    user = await verify_user(db, login_form.email, login_form.password)
     if not user:
         raise WebSocketValidationException(
             detail="Incorrect username or password!",
@@ -48,11 +54,16 @@ async def login(login_form: LoginForm, db: Session):
 
     access_token = create_jwt_token(user.email)
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    return AuthResponse(
+        data=LoginData(
+            access_token=access_token,
+            token_type="bearer",
+        )
+    )
 
 
-async def me(db: Session, token: str = Depends(oauth2_scheme)):
-    check_blacklisted_token(action="me", db=db, token=token)
+async def me(db: AsyncSession, token: str = Depends(oauth2_scheme)):
+    await check_blacklisted_token(action="me", db=db, token=token)
     try:
         email = verify_token(token)
     except PyJWTError:
@@ -61,18 +72,18 @@ async def me(db: Session, token: str = Depends(oauth2_scheme)):
             action=WebSocketActions.ME,
         )
 
-    user = get_user_by_email(db, email)
+    user = await get_user_by_email(db, email)
     if not user:
         raise WebSocketValidationException(
             detail="User not found!",
             action=WebSocketActions.ME,
         )
 
-    return {"email": user.email, "nickname": user.nickname}
+    return AuthResponse(data=MeSchema(email=user.email, nickname=user.nickname))
 
 
-async def logout(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    check_blacklisted_token(action="logout", db=db, token=token)
+async def logout(db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    await check_blacklisted_token(action="logout", db=db, token=token)
     try:
         verify_token(token)
     except PyJWTError:
@@ -80,5 +91,5 @@ async def logout(db: Session = Depends(get_db), token: str = Depends(oauth2_sche
             detail="Invalid token!",
             action=WebSocketActions.LOGOUT,
         )
-    if not is_token_blacklisted(db, token):
-        blacklist_token(db, token)
+    if not await is_token_blacklisted(db, token):
+        await blacklist_token(db, token)

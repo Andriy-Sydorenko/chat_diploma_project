@@ -6,11 +6,12 @@ from fastapi import HTTPException, WebSocket, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt import DecodeError, ExpiredSignatureError, InvalidTokenError, PyJWTError
 from passlib.context import CryptContext
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from api.crud.user import get_user_by_email
 from api.models.token import BlacklistedToken
-from config import ACCESS_TOKEN_EXPIRATION_TIME, ENCRYPTION_ALGORITHM, JWT_SECRET
+from utils.config import ACCESS_TOKEN_EXPIRATION_TIME, ENCRYPTION_ALGORITHM, JWT_SECRET
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -75,18 +76,20 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-def verify_user(db: Session, email: str, password: str):
-    user = get_user_by_email(db, email=email)
+async def verify_user(db: AsyncSession, email: str, password: str):
+    user = await get_user_by_email(db, email=email)
     if user and verify_password(password, user.hashed_password):
         return user
     return None
 
 
-def blacklist_token(db: Session, token: str):
+async def blacklist_token(db: AsyncSession, token: str):
     blacklisted_token = BlacklistedToken(token=token)
     db.add(blacklisted_token)
-    db.commit()
+    await db.commit()
 
 
-def is_token_blacklisted(db: Session, token: str) -> bool:
-    return db.query(BlacklistedToken).filter(BlacklistedToken.token == token).first() is not None
+async def is_token_blacklisted(db: AsyncSession, token: str) -> bool:
+    query = select(BlacklistedToken).where(BlacklistedToken.token == token)
+    result = await db.execute(query)
+    return result.scalars().first() is not None

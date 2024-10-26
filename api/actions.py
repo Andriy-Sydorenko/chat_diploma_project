@@ -13,7 +13,8 @@ from api.auth import (
 )
 from api.crud.user import create_user, get_user_by_email
 from api.exceptions import WebSocketValidationException
-from api.schemas.user import LoginForm, UserCreate
+from api.schemas.auth import AuthResponse, LoginData, RegisterData
+from api.schemas.user import LoginForm, MeSchema, UserCreate
 from engine import get_db
 from enums import WebSocketActions
 
@@ -35,7 +36,12 @@ async def register(user_create: UserCreate, db: Session):
     create_user(db, user_create.email, user_create.nickname, hashed_password)
 
     access_token = create_jwt_token(user_create.email)
-    return {"data": {"message": "User created successfully", "access_token": access_token, "token_type": "bearer"}}
+    return AuthResponse(
+        data=RegisterData(
+            access_token=access_token,
+            token_type="bearer",
+        )
+    )
 
 
 async def login(login_form: LoginForm, db: Session):
@@ -48,7 +54,12 @@ async def login(login_form: LoginForm, db: Session):
 
     access_token = create_jwt_token(user.email)
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    return AuthResponse(
+        data=LoginData(
+            access_token=access_token,
+            token_type="bearer",
+        )
+    )
 
 
 async def me(db: Session, token: str = Depends(oauth2_scheme)):
@@ -68,7 +79,7 @@ async def me(db: Session, token: str = Depends(oauth2_scheme)):
             action=WebSocketActions.ME,
         )
 
-    return {"email": user.email, "nickname": user.nickname}
+    return AuthResponse(data=MeSchema(email=user.email, nickname=user.nickname))
 
 
 async def logout(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):

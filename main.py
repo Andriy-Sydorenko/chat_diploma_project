@@ -31,12 +31,12 @@ async def check_connection(websocket: WebSocket):
                 if action == WebSocketActions.REGISTER:
                     user_data = UserCreate(**data.get("data"))
                     response = await register(user_data, db)
-                    await manager.send_json(response, websocket)
+                    await manager.send_json(response.dict(), websocket)
 
                 elif action == WebSocketActions.LOGIN:
                     login_form = LoginForm(**data.get("data"))
                     response = await login(login_form, db)
-                    await manager.send_json(response, websocket)
+                    await manager.send_json(response.dict(), websocket)
 
                 elif action == WebSocketActions.LOGOUT:
                     await logout(token=token, db=db)
@@ -44,7 +44,7 @@ async def check_connection(websocket: WebSocket):
 
                 elif action == WebSocketActions.ME:
                     response = await me(token=token, db=db)
-                    await manager.send_json(response, websocket)
+                    await manager.send_json(response.dict(), websocket)
 
             except WebSocketValidationException as ws_exc:
                 await manager.send_json(ws_exc.to_dict(), websocket)

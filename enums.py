@@ -22,8 +22,13 @@ class EncryptionAlgorithms(str, Enum):
 
 
 class WebSocketActions(str, Enum):
-    REGISTER = "register"
-    LOGIN = "login"
-    LOGOUT = "logout"
-    SEND_MESSAGE = "send_message"
-    ME = "me"
+    REGISTER = "REGISTER"
+    LOGIN = "LOGIN"
+    LOGOUT = "LOGOUT"
+    SEND_MESSAGE = "SEND_MESSAGE"
+    ME = "ME"
+
+
+class ResponseStatuses(str, Enum):
+    OK = "OK"
+    ERROR = "ERROR"

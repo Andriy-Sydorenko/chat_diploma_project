@@ -10,3 +10,8 @@ class UserCreate(BaseModel):
 class LoginForm(BaseModel):
     email: EmailStr
     password: str
+
+
+class MeSchema(BaseModel):
+    email: EmailStr
+    nickname: str

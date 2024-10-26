@@ -3,13 +3,16 @@ from dotenv import load_dotenv
 from utils.enums import EncryptionAlgorithms
 from utils.env_parser import EnvParser
 from utils.logging_config import logger
-from utils.utils import generate_jwt_secret_key
+from utils.utils import generate_jwt_secret_key, get_git_branch_name
 
 load_dotenv()
 
 env = EnvParser()
 
-DATABASE_URL = env.str("DATABASE_URL")
+if get_git_branch_name() == "deploy":
+    DATABASE_URL = env.str("PRODUCTION_DATABASE_URL")
+else:
+    DATABASE_URL = env.str("DEFAULT_DATABASE_URL")
 
 # Time should be in minutes
 ACCESS_TOKEN_EXPIRATION_TIME = env.int("ACCESS_TOKEN_EXPIRATION_TIME", 60)

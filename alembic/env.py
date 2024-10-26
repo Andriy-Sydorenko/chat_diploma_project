@@ -11,6 +11,7 @@ from utils.config import DATABASE_URL
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -19,7 +20,7 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-sync_url = DATABASE_URL.replace('+asyncpg', '')
+sync_url = DATABASE_URL.replace("+asyncpg", "") if "+asyncpg" in DATABASE_URL else DATABASE_URL.replace("+aiosqlite", "")
 
 
 def run_migrations_offline() -> None:

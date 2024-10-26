@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import os
+import subprocess
 
 
 def generate_jwt_secret_key(random_byte_sequence_length: int = 64) -> str:
@@ -11,3 +12,13 @@ def generate_jwt_secret_key(random_byte_sequence_length: int = 64) -> str:
     scrambled_key = base64.urlsafe_b64encode(hashlib.sha256(sha256_hash[::-1]).digest()).rstrip(b"=")
     combined_key = base64_encoded_key + scrambled_key
     return combined_key.decode("utf-8")
+
+
+def get_git_branch_name():
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=True
+        )
+        return result.stdout.strip()
+    except subprocess.CalledProcessError:
+        return "unknown"

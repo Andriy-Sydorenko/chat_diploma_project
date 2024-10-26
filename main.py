@@ -13,6 +13,13 @@ app = FastAPI()
 manager = ConnectionManager()
 
 
+@app.get("/")
+async def health_check():
+    return {
+        "status": "OK",
+    }
+
+
 @app.websocket("/")
 async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_db)):
     await manager.connect(websocket)

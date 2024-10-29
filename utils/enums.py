@@ -25,6 +25,8 @@ class WebSocketActions(str, Enum):
     REGISTER = "REGISTER"
     LOGIN = "LOGIN"
     LOGOUT = "LOGOUT"
+    GET_CHATS = "GET_CHATS"
+    CREATE_CHAT = "CREATE_CHAT"
     SEND_MESSAGE = "SEND_MESSAGE"
     ME = "ME"
 

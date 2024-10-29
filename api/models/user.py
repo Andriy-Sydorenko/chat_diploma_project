@@ -1,4 +1,6 @@
-from sqlalchemy import Boolean, Column, Integer, String, UniqueConstraint
+import uuid
+
+from sqlalchemy import UUID, Boolean, Column, Integer, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from api.models.chat import user_chat_association
@@ -9,7 +11,9 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True, nullable=False)
+
     email = Column(String(255), nullable=False, unique=True)
+    uuid = Column(UUID(as_uuid=True), default=uuid.uuid4, unique=True, nullable=False, index=True)
     nickname = Column(String(60), nullable=False)
     hashed_password = Column(String, nullable=False)
 

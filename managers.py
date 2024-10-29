@@ -19,6 +19,7 @@ class ConnectionManager:
 
     def disconnect(self, websocket: WebSocket):
         self.active_connections.remove(websocket)
+        websocket.close()
 
     async def send_message(self, message: str):
         for connection in self.active_connections:

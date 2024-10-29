@@ -2,7 +2,7 @@ from datetime import UTC, datetime, timedelta
 from secrets import token_urlsafe
 
 import jwt
-from fastapi import HTTPException, WebSocket, status
+from fastapi import WebSocket
 from fastapi.security import OAuth2PasswordBearer
 from jwt import DecodeError, ExpiredSignatureError, InvalidTokenError, PyJWTError
 from passlib.context import CryptContext
@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from api.crud.user import get_user_by_email
+from api.exceptions import WebSocketValidationException
 from api.models.token import BlacklistedToken
 from utils.config import ACCESS_TOKEN_EXPIRATION_TIME, ENCRYPTION_ALGORITHM, JWT_SECRET
 
@@ -53,19 +54,21 @@ def verify_token(token: str):
         raise PyJWTError("Token is invalid!")
 
 
-async def get_current_user_via_websocket(websocket: WebSocket):
+async def get_current_user_via_websocket(websocket: WebSocket, db: AsyncSession, action: str):
     token = websocket.headers.get("Authorization")
     if token is None:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)  # Policy violation (missing token)
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Token is missing")
+        raise WebSocketValidationException(detail="Token is missing", action=action)
 
     try:
         email = verify_token(token)
     except PyJWTError:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)  # Policy violation (invalid token)
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
+        raise WebSocketValidationException(detail="Invalid token", action=action)
 
-    return email
+    user = await get_user_by_email(db, email)
+    if not user:
+        raise WebSocketValidationException(detail="User not found", action=action)
+
+    return user
 
 
 def verify_password(plain_password, hashed_password):

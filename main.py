@@ -2,12 +2,22 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.params import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.actions import login, logout, me, register
+from api.actions import (
+    create_chat,
+    get_chats,
+    login,
+    logout,
+    me,
+    register,
+    send_message,
+)
 from api.exceptions import WebSocketValidationException
+from api.schemas.chat import ChatCreate
+from api.schemas.message import MessageCreate
 from api.schemas.user import LoginForm, UserCreate
 from engine import get_db
 from managers import ConnectionManager
-from utils.enums import WebSocketActions
+from utils.enums import ResponseStatuses, WebSocketActions
 
 app = FastAPI()
 manager = ConnectionManager()
@@ -41,10 +51,24 @@ async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_
 
                 elif action == WebSocketActions.LOGOUT:
                     await logout(token=token, db=db)
-                    await websocket.send_text("Successful logout!")
+                    await websocket.send_json({"status": ResponseStatuses.OK, "message": "Successful logout!"})
 
                 elif action == WebSocketActions.ME:
                     response = await me(token=token, db=db)
+                    await manager.send_json(response.dict(), websocket)
+
+                elif action == WebSocketActions.GET_CHATS:
+                    response = await get_chats(websocket=websocket, db=db, token=token)
+                    await manager.send_json(response.dict(), websocket)
+
+                elif action == WebSocketActions.CREATE_CHAT:
+                    chat_data = ChatCreate(**data.get("data"))
+                    response = await create_chat(chat_data, websocket, db, token=token)
+                    await manager.send_json(response.dict(), websocket)
+
+                elif action == WebSocketActions.SEND_MESSAGE:
+                    message_data = MessageCreate(**data.get("data"))
+                    response = await send_message(message_data, websocket, db)
                     await manager.send_json(response.dict(), websocket)
 
             except WebSocketValidationException as ws_exc:
@@ -52,4 +76,3 @@ async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        await manager.send_message("Connection closed")

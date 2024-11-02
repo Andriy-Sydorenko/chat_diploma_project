@@ -26,6 +26,7 @@ class WebSocketActions(str, Enum):
     LOGIN = "LOGIN"
     LOGOUT = "LOGOUT"
     GET_CHATS = "GET_CHATS"
+    GET_USERS = "GET_USERS"
     CREATE_CHAT = "CREATE_CHAT"
     SEND_MESSAGE = "SEND_MESSAGE"
     GET_CHAT_MESSAGES = "GET_CHAT_MESSAGES"
@@ -35,6 +36,7 @@ class WebSocketActions(str, Enum):
 SCHEMA_TO_ACTION_MAPPER = {
     "UserLogin": WebSocketActions.LOGIN,
     "UserCreate": WebSocketActions.REGISTER,
+    "UserListResponse": WebSocketActions.GET_USERS,
 }
 
 

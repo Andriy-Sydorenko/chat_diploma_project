@@ -7,7 +7,7 @@ class ChatCreate(BaseModel):
     participant_email: EmailStr
 
 
-class ChatResponse(BaseModel):
+class ChatListResponse(BaseModel):
     id: int
     uuid: str
     participants: list[str]
@@ -16,8 +16,8 @@ class ChatResponse(BaseModel):
 
 
 class WebsocketChatResponse(WebSocketResponseMessage):
-    data: list[ChatResponse]
+    data: list[ChatListResponse]
 
 
 class WebsocketChatCreateResponse(WebSocketResponseMessage):
-    data: ChatResponse
+    data: ChatListResponse

@@ -1,5 +1,7 @@
 from pydantic import BaseModel, constr, field_validator
 
+from api.schemas.ws import WebSocketResponseMessage
+
 
 class EmailPasswordValidation(BaseModel):
     @field_validator("email", check_fields=False)
@@ -41,3 +43,13 @@ class UserLogin(EmailPasswordValidation):
 class MeSchema(BaseModel):
     email: str
     nickname: str
+
+
+class UserListResponse(BaseModel):
+    email: str
+    nickname: str
+    uuid: str
+
+
+class WebsocketUserResponse(WebSocketResponseMessage):
+    data: list[UserListResponse]

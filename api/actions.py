@@ -18,13 +18,13 @@ from api.auth import (
     verify_user,
 )
 from api.crud.chat import get_chats_for_user
-from api.crud.user import create_user, get_user_by_email
+from api.crud.user import create_user, get_user_by_email, get_users_list
 from api.exceptions import WebSocketValidationException
 from api.models import Chat, Message, User
 from api.schemas.auth import AuthResponse, LoginData, RegisterData
 from api.schemas.chat import (
     ChatCreate,
-    ChatResponse,
+    ChatListResponse,
     WebsocketChatCreateResponse,
     WebsocketChatResponse,
 )
@@ -33,7 +33,7 @@ from api.schemas.message import (
     MessageResponse,
     WebsocketMessageCreateResponse,
 )
-from api.schemas.user import MeSchema, UserCreate, UserLogin
+from api.schemas.user import MeSchema, UserCreate, UserLogin, WebsocketUserResponse
 from engine import get_db
 from managers import manager
 from utils.enums import WebSocketActions
@@ -103,11 +103,19 @@ async def me(db: AsyncSession, token: str = Depends(oauth2_scheme)):
 
 
 async def logout(db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    await check_blacklisted_token(action=WebSocketActions.LOGOUT, db=db, token=token)
+    try:
+        verify_token(token)
+    except PyJWTError:
+        raise WebSocketValidationException(
+            detail="Invalid token!",
+            action=WebSocketActions.LOGOUT,
+        )
     if not await is_token_blacklisted(db, token):
         await blacklist_token(db, token)
 
 
-async def get_chats(websocket, db: AsyncSession, token: str):
+async def get_chats_list(websocket, db: AsyncSession, token: str):
     await check_blacklisted_token(action=WebSocketActions.GET_CHATS, db=db, token=token)
     user = await get_current_user_via_websocket(websocket, db=db, action=WebSocketActions.GET_CHATS)
     if not user:
@@ -116,6 +124,17 @@ async def get_chats(websocket, db: AsyncSession, token: str):
             action=WebSocketActions.GET_CHATS,
         )
     return WebsocketChatResponse(data=await get_chats_for_user(user_uuid=user.uuid, db=db))
+
+
+async def get_users(websocket: WebSocket, db: AsyncSession, token: str):
+    await check_blacklisted_token(action=WebSocketActions.GET_USERS, db=db, token=token)
+    user = await get_current_user_via_websocket(websocket, db=db, action=WebSocketActions.GET_CHATS)
+    if not user:
+        raise WebSocketValidationException(
+            detail="User not found!",
+            action=WebSocketActions.GET_USERS,
+        )
+    return WebsocketUserResponse(data=await get_users_list(request_user_uuid=user.uuid, db=db))
 
 
 async def send_message(data: MessageCreate, websocket: WebSocket, db: AsyncSession, token: str):
@@ -152,7 +171,6 @@ async def send_message(data: MessageCreate, websocket: WebSocket, db: AsyncSessi
     await db.refresh(message)
 
     other_participant = next(participant for participant in chat.participants if participant.id != sender.id)
-    print(f"{manager.active_connections=}")
     for connection in manager.active_connections:
         if (
             getattr(
@@ -160,7 +178,6 @@ async def send_message(data: MessageCreate, websocket: WebSocket, db: AsyncSessi
             )
             == other_participant.email
         ):
-            print("FUCK YEAH!!!!")
             await manager.send_json(
                 {
                     "action": WebSocketActions.SEND_MESSAGE,
@@ -232,7 +249,7 @@ async def create_chat(
     await db.refresh(chat)
 
     return WebsocketChatCreateResponse(
-        data=ChatResponse(
+        data=ChatListResponse(
             id=chat.id,
             uuid=str(chat.uuid),
             participants=[str(creator.uuid), str(participant.uuid)],

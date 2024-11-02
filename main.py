@@ -38,7 +38,7 @@ async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_
         while True:
             data = await manager.get_json(websocket)
             action = data.get("action")
-            token = websocket.headers.get("Authorization")
+            token = websocket.query_params.get("auth")
             try:
                 if action == WebSocketActions.REGISTER:
                     user_data = UserCreate(**data.get("data"))

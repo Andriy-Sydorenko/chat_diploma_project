@@ -55,7 +55,7 @@ def verify_token(token: str):
 
 
 async def get_current_user_via_websocket(websocket: WebSocket, db: AsyncSession, action: str):
-    token = websocket.headers.get("Authorization")
+    token = websocket.query_params.get("auth")
     if token is None:
         raise WebSocketValidationException(detail="Token is missing", action=action)
 

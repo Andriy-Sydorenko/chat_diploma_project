@@ -92,7 +92,7 @@ async def blacklist_token(db: AsyncSession, token: str):
     await db.commit()
 
 
-async def is_token_blacklisted(db: AsyncSession, token: str) -> bool:
+async def is_token_blacklisted(db: AsyncSession, token: str = "") -> bool:
     query = select(BlacklistedToken).where(BlacklistedToken.token == token)
     result = await db.execute(query)
     return result.scalars().first() is not None

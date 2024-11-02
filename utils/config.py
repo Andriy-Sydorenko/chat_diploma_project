@@ -9,7 +9,6 @@ load_dotenv()
 
 env = EnvParser()
 IS_DEPLOY_BRANCH = get_git_branch_name() == "deploy"
-print(f"{IS_DEPLOY_BRANCH=}")
 
 if IS_DEPLOY_BRANCH:
     DATABASE_URL = env.str("PRODUCTION_DATABASE_URL")

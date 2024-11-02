@@ -103,14 +103,6 @@ async def me(db: AsyncSession, token: str = Depends(oauth2_scheme)):
 
 
 async def logout(db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    await check_blacklisted_token(action=WebSocketActions.LOGOUT, db=db, token=token)
-    try:
-        verify_token(token)
-    except PyJWTError:
-        raise WebSocketValidationException(
-            detail="Invalid token!",
-            action=WebSocketActions.LOGOUT,
-        )
     if not await is_token_blacklisted(db, token):
         await blacklist_token(db, token)
 

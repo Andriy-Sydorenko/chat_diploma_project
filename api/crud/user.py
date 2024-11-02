@@ -12,6 +12,12 @@ async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
     return result.scalars().first()
 
 
+async def get_user_by_uuid(db: AsyncSession, uuid: str) -> Optional[User]:
+    query = select(User).where(User.uuid == uuid)
+    result = await db.execute(query)
+    return result.scalars().first()
+
+
 async def create_user(db: AsyncSession, email: str, nickname: str, hashed_password: str):
     db_user = User(email=email, nickname=nickname, hashed_password=hashed_password)
     db.add(db_user)

@@ -21,8 +21,16 @@ class WebSocketAuthenticationException(WebSocketException):
 
 
 class WebSocketValidationException(WebSocketException):
-    def __init__(self, detail: str, action: str = None):
+    def __init__(self, detail: str, action: str = None, field: str = None):
+        self.field = field
         super().__init__(
             detail=detail,
             action=action,
         )
+
+    def to_dict(self):
+        return {
+            "status": ResponseStatuses.ERROR,
+            "action": self.action,
+            "error": {"detail": self.detail, "field": self.field},
+        }

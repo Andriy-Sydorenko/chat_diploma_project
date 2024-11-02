@@ -8,8 +8,10 @@ from utils.utils import generate_jwt_secret_key, get_git_branch_name
 load_dotenv()
 
 env = EnvParser()
+IS_DEPLOY_BRANCH = get_git_branch_name() == "deploy"
+print(f"{IS_DEPLOY_BRANCH=}")
 
-if get_git_branch_name() == "deploy":
+if IS_DEPLOY_BRANCH:
     DATABASE_URL = env.str("PRODUCTION_DATABASE_URL")
 else:
     DATABASE_URL = env.str("DEFAULT_DATABASE_URL")

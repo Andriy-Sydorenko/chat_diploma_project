@@ -15,7 +15,7 @@ async def get_chats_for_user(user_uuid: int, db: AsyncSession) -> list[ChatRespo
 
     chat_responses = []
     for chat in chats:
-        other_participant = next(p for p in chat.participants if p.uuid != user_uuid)
+        other_participant = next(participant for participant in chat.participants if participant.uuid != user_uuid)
         chat_responses.append(
             ChatResponse(
                 id=chat.id,

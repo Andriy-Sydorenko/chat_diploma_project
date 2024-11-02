@@ -1,7 +1,10 @@
+from uuid import UUID
+
 from fastapi import Depends
 from jwt import PyJWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 from starlette.websockets import WebSocket
 
 from api.auth import (
@@ -25,9 +28,14 @@ from api.schemas.chat import (
     WebsocketChatCreateResponse,
     WebsocketChatResponse,
 )
-from api.schemas.message import MessageCreate, MessageResponse
-from api.schemas.user import LoginForm, MeSchema, UserCreate
+from api.schemas.message import (
+    MessageCreate,
+    MessageResponse,
+    WebsocketMessageCreateResponse,
+)
+from api.schemas.user import MeSchema, UserCreate, UserLogin
 from engine import get_db
+from managers import manager
 from utils.enums import WebSocketActions
 
 
@@ -56,7 +64,7 @@ async def register(user_create: UserCreate, db: AsyncSession):
     )
 
 
-async def login(login_form: LoginForm, db: AsyncSession):
+async def login(login_form: UserLogin, db: AsyncSession):
     user = await verify_user(db, login_form.email, login_form.password)
     if not user:
         raise WebSocketValidationException(
@@ -118,9 +126,7 @@ async def get_chats(websocket, db: AsyncSession, token: str):
     return WebsocketChatResponse(data=await get_chats_for_user(user_uuid=user.uuid, db=db))
 
 
-async def send_message(
-    data: MessageCreate, websocket: WebSocket, db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)
-):
+async def send_message(data: MessageCreate, websocket: WebSocket, db: AsyncSession, token: str):
     await check_blacklisted_token(action=WebSocketActions.SEND_MESSAGE, db=db, token=token)
     sender = await get_current_user_via_websocket(websocket=websocket, db=db, action=WebSocketActions.SEND_MESSAGE)
     if not sender:
@@ -128,8 +134,16 @@ async def send_message(
             detail="Sender not found!",
             action=WebSocketActions.SEND_MESSAGE,
         )
+    try:
+        chat_uuid = UUID(data.chat_uuid)
+    except ValueError:
+        raise WebSocketValidationException(
+            detail="Invalid UUID format for chat_uuid!", action=WebSocketActions.SEND_MESSAGE
+        )
 
-    chat = await db.get(Chat, data.chat_id)
+    chat_query = select(Chat).options(selectinload(Chat.participants)).filter(Chat.uuid == chat_uuid)
+    chat_result = await db.execute(chat_query)
+    chat = chat_result.scalars().first()
     if not chat:
         raise WebSocketValidationException(
             detail="Chat not found!",
@@ -137,7 +151,7 @@ async def send_message(
         )
 
     message = Message(
-        chat_id=data.chat_id,
+        chat_id=chat.id,
         sender_id=sender.id,
         content=data.content,
     )
@@ -145,12 +159,38 @@ async def send_message(
     await db.commit()
     await db.refresh(message)
 
-    return MessageResponse(
-        id=message.id,
-        chat_id=message.chat_id,
-        sender_email=sender.email,
-        content=message.content,
-        sent_at=message.sent_at.isoformat(),
+    other_participant = next(participant for participant in chat.participants if participant.id != sender.id)
+    print(f"{manager.active_connections=}")
+    for connection in manager.active_connections:
+        if (
+            getattr(
+                await get_current_user_via_websocket(connection, db=db, action=WebSocketActions.SEND_MESSAGE), "email"
+            )
+            == other_participant.email
+        ):
+            print("FUCK YEAH!!!!")
+            await manager.send_json(
+                {
+                    "action": WebSocketActions.SEND_MESSAGE,
+                    "data": {
+                        "id": message.id,
+                        "chat_id": message.chat_id,
+                        "sender_email": sender.email,
+                        "content": message.content,
+                        "sent_at": message.sent_at.isoformat(),
+                    },
+                },
+                connection,
+            )
+
+    return WebsocketMessageCreateResponse(
+        data=MessageResponse(
+            id=message.id,
+            chat_id=message.chat_id,
+            sender_uuid=str(sender.uuid),
+            content=message.content,
+            sent_at=message.sent_at.isoformat(),
+        )
     )
 
 
@@ -181,7 +221,6 @@ async def create_chat(
             Chat.participants.any(User.id == participant.id),
         )
     )
-    print(f"{existing_chat_query=}")
     existing_chat_result = await db.execute(existing_chat_query)
     existing_chat = existing_chat_result.scalars().first()
 

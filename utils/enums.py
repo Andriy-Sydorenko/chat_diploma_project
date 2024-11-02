@@ -28,7 +28,14 @@ class WebSocketActions(str, Enum):
     GET_CHATS = "GET_CHATS"
     CREATE_CHAT = "CREATE_CHAT"
     SEND_MESSAGE = "SEND_MESSAGE"
+    GET_CHAT_MESSAGES = "GET_CHAT_MESSAGES"
     ME = "ME"
+
+
+SCHEMA_TO_ACTION_MAPPER = {
+    "UserLogin": WebSocketActions.LOGIN,
+    "UserCreate": WebSocketActions.REGISTER,
+}
 
 
 class ResponseStatuses(str, Enum):

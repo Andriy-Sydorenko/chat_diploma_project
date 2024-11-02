@@ -1,5 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.params import Depends
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.actions import (
@@ -14,13 +15,12 @@ from api.actions import (
 from api.exceptions import WebSocketValidationException
 from api.schemas.chat import ChatCreate
 from api.schemas.message import MessageCreate
-from api.schemas.user import LoginForm, UserCreate
+from api.schemas.user import UserCreate, UserLogin
 from engine import get_db
-from managers import ConnectionManager
-from utils.enums import ResponseStatuses, WebSocketActions
+from managers import manager
+from utils.enums import SCHEMA_TO_ACTION_MAPPER, ResponseStatuses, WebSocketActions
 
 app = FastAPI()
-manager = ConnectionManager()
 
 
 @app.get("/")
@@ -33,6 +33,7 @@ async def health_check():
 @app.websocket("/")
 async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_db)):
     await manager.connect(websocket)
+    print(manager.active_connections)
     try:
         while True:
             data = await manager.get_json(websocket)
@@ -45,7 +46,7 @@ async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_
                     await manager.send_json(response.dict(), websocket)
 
                 elif action == WebSocketActions.LOGIN:
-                    login_form = LoginForm(**data.get("data"))
+                    login_form = UserLogin(**data.get("data"))
                     response = await login(login_form, db)
                     await manager.send_json(response.dict(), websocket)
 
@@ -66,11 +67,22 @@ async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_
                     response = await create_chat(chat_data, websocket, db, token=token)
                     await manager.send_json(response.dict(), websocket)
 
+                # FIXME: Implement this action, probably will need to change architecture
                 elif action == WebSocketActions.SEND_MESSAGE:
                     message_data = MessageCreate(**data.get("data"))
-                    response = await send_message(message_data, websocket, db)
+                    response = await send_message(message_data, websocket, db, token)
                     await manager.send_json(response.dict(), websocket)
 
+                elif action == WebSocketActions.GET_CHAT_MESSAGES:
+                    raise NotImplementedError
+
+            except ValidationError as exc:
+                action = SCHEMA_TO_ACTION_MAPPER.get(exc.title)
+                error = exc.errors()[0]
+                field = error.get("loc")[0]
+                detail = str(error.get("ctx").get("error"))
+                wc_validation_exception = WebSocketValidationException(action=action, detail=detail, field=field)
+                await manager.send_json(wc_validation_exception.to_dict(), websocket)
             except WebSocketValidationException as ws_exc:
                 await manager.send_json(ws_exc.to_dict(), websocket)
 

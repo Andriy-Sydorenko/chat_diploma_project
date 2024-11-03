@@ -6,7 +6,6 @@ from secrets import token_urlsafe
 import jwt
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from fastapi import WebSocket
 from fastapi.security import OAuth2PasswordBearer
 from jwt import DecodeError, ExpiredSignatureError, InvalidTokenError, PyJWTError
 from passlib.context import CryptContext
@@ -65,8 +64,7 @@ def verify_token(token: str):
         raise PyJWTError("Token is invalid!")
 
 
-async def get_current_user_via_websocket(websocket: WebSocket, db: AsyncSession, action: str):
-    token = websocket.headers.get("Sec-WebSocket-Protocol")
+async def get_current_user_via_websocket(token: str, db: AsyncSession, action: str):
     if token is None:
         raise WebSocketValidationException(detail="Token is missing", action=action)
 

@@ -8,7 +8,6 @@ class ChatCreate(BaseModel):
 
 
 class ChatListResponse(BaseModel):
-    id: int
     uuid: str
     participants: list[str]
     created_at: str

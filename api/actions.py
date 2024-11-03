@@ -5,7 +5,6 @@ from jwt import PyJWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from starlette.websockets import WebSocket
 
 from api.auth import (
     blacklist_token,
@@ -137,7 +136,7 @@ async def get_users(db: AsyncSession, token: str):
     return WebsocketUserResponse(data={"users": await get_users_list(request_user_uuid=user.uuid, db=db)})
 
 
-async def send_message(data: MessageCreate, websocket: WebSocket, db: AsyncSession, token: str):
+async def send_message(data: MessageCreate, db: AsyncSession, token: str):
     await check_blacklisted_token(action=WebSocketActions.SEND_MESSAGE, db=db, token=token)
     sender = await get_current_user_via_websocket(token=token, db=db, action=WebSocketActions.SEND_MESSAGE)
     if not sender:
@@ -248,7 +247,6 @@ async def create_chat(data: ChatCreate, db: AsyncSession = Depends(get_db), toke
 
     return WebsocketChatCreateResponse(
         data=ChatListResponse(
-            id=chat.id,
             uuid=str(chat.uuid),
             participants=[str(creator.uuid), str(participant.uuid)],
             created_at=chat.created_at.isoformat(),

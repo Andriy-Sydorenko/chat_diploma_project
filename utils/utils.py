@@ -3,6 +3,9 @@ import hashlib
 import os
 import subprocess
 
+from sqlalchemy import delete
+from sqlalchemy.ext.asyncio import AsyncSession
+
 
 def generate_jwt_secret_key(random_byte_sequence_length: int = 64) -> str:
     # `length` parameter determines the length of the random byte sequence, larger number - more "randomness"
@@ -22,3 +25,11 @@ def get_git_branch_name():
         return result.stdout.strip()
     except subprocess.CalledProcessError:
         return "unknown"
+
+
+async def cleanup_blacklisted_tokens(db: AsyncSession):
+    from api.models import BlacklistedToken
+
+    query = delete(BlacklistedToken)
+    await db.execute(query)
+    await db.commit()

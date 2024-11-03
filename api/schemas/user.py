@@ -52,4 +52,4 @@ class UserListResponse(BaseModel):
 
 
 class WebsocketUserResponse(WebSocketResponseMessage):
-    data: list[UserListResponse]
+    data: dict[str, list[UserListResponse]]

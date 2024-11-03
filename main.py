@@ -1,3 +1,7 @@
+import asyncio
+from contextlib import asynccontextmanager
+
+import httpx
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.params import Depends
 from pydantic import ValidationError
@@ -21,8 +25,29 @@ from api.schemas.user import UserCreate, UserLogin
 from engine import get_db
 from managers import manager
 from utils.enums import SCHEMA_TO_ACTION_MAPPER, ResponseStatuses, WebSocketActions
+from utils.utils import cleanup_blacklisted_tokens
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    ping_pong_task = asyncio.create_task(ping_pong())
+    yield
+    ping_pong_task.cancel()
+    async for db in get_db():
+        await cleanup_blacklisted_tokens(db=db)
+
+
+async def ping_pong():
+    async with httpx.AsyncClient() as client:
+        while True:
+            response = await client.get("http://localhost:8000/ping")
+            print(f"Health check response: {response.json()}")
+            await asyncio.sleep(50)
+
+
+app = FastAPI(
+    lifespan=lifespan,
+)
 
 
 @app.get("/")
@@ -30,6 +55,11 @@ async def health_check():
     return {
         "status": "OK",
     }
+
+
+@app.get("/ping")
+async def ping():
+    return {"message": "pong"}
 
 
 @app.websocket("/")

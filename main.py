@@ -39,7 +39,7 @@ async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_
         while True:
             data: dict = await manager.get_json(websocket)
             action = data.get("action")
-            encrypted_token = data.pop("token", "")
+            encrypted_token = data["data"].pop("token", "")
             if encrypted_token:
                 token = decrypt_jwt(encrypted_token)
             else:

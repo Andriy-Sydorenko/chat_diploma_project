@@ -31,7 +31,7 @@ class Chat(Base):
     uuid = Column(UUID(as_uuid=True), default=uuid.uuid4, unique=True, nullable=False, index=True)
     name = Column(String, nullable=True)  # For group chats
     is_group = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     participants = relationship("User", secondary=user_chat_association, back_populates="chats")
     messages = relationship("Message", back_populates="chat")

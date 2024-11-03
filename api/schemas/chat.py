@@ -16,7 +16,7 @@ class ChatListResponse(BaseModel):
 
 
 class WebsocketChatResponse(WebSocketResponseMessage):
-    data: list[ChatListResponse]
+    data: dict[str, list[ChatListResponse]]
 
 
 class WebsocketChatCreateResponse(WebSocketResponseMessage):

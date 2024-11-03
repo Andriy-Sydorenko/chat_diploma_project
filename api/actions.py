@@ -123,7 +123,7 @@ async def get_chats_list(db: AsyncSession, token: str):
             detail="User not found!",
             action=WebSocketActions.GET_CHATS,
         )
-    return WebsocketChatResponse(data=await get_chats_for_user(user_uuid=user.uuid, db=db))
+    return WebsocketChatResponse(data={"chats": await get_chats_for_user(user_uuid=user.uuid, db=db)})
 
 
 async def get_users(db: AsyncSession, token: str):
@@ -134,7 +134,7 @@ async def get_users(db: AsyncSession, token: str):
             detail="User not found!",
             action=WebSocketActions.GET_USERS,
         )
-    return WebsocketUserResponse(data=await get_users_list(request_user_uuid=user.uuid, db=db))
+    return WebsocketUserResponse(data={"users": await get_users_list(request_user_uuid=user.uuid, db=db)})
 
 
 async def send_message(data: MessageCreate, websocket: WebSocket, db: AsyncSession, token: str):

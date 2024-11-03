@@ -10,6 +10,7 @@ from starlette.websockets import WebSocket
 from api.auth import (
     blacklist_token,
     create_jwt_token,
+    encrypt_jwt,
     get_current_user_via_websocket,
     get_password_hash,
     is_token_blacklisted,
@@ -56,10 +57,10 @@ async def register(user_create: UserCreate, db: AsyncSession):
     await create_user(db, user_create.email, user_create.nickname, hashed_password)
 
     access_token = create_jwt_token(user_create.email)
+    encrypted_token = encrypt_jwt(access_token)
     return AuthResponse(
         data=RegisterData(
-            access_token=access_token,
-            token_type="bearer",
+            access_token=encrypted_token,
         )
     )
 
@@ -73,11 +74,11 @@ async def login(login_form: UserLogin, db: AsyncSession):
         )
 
     access_token = create_jwt_token(user.email)
+    encrypted_token = encrypt_jwt(access_token)
 
     return AuthResponse(
         data=LoginData(
-            access_token=access_token,
-            token_type="bearer",
+            access_token=encrypted_token,
         )
     )
 

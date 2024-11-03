@@ -1,3 +1,5 @@
+import os
+
 from dotenv import load_dotenv
 
 from utils.enums import EncryptionAlgorithms
@@ -18,6 +20,9 @@ else:
 # Time should be in minutes
 ACCESS_TOKEN_EXPIRATION_TIME = env.int("ACCESS_TOKEN_EXPIRATION_TIME", 60)
 ENCRYPTION_ALGORITHM = EncryptionAlgorithms.HS384
+IV_LENGTH = env.int("IV_LENGTH", 16)
+TAG_LENGTH = env.int("TAG_LENGTH", 16)
+JWT_AES_KEY = os.urandom(32)
 
 try:
     JWT_SECRET = generate_jwt_secret_key(env.int("JWT_RANDOM_BYTES_LENGTH", 64))

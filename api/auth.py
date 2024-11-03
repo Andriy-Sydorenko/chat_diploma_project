@@ -1,7 +1,11 @@
+import base64
+import os
 from datetime import UTC, datetime, timedelta
 from secrets import token_urlsafe
 
 import jwt
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from fastapi import WebSocket
 from fastapi.security import OAuth2PasswordBearer
 from jwt import DecodeError, ExpiredSignatureError, InvalidTokenError, PyJWTError
@@ -12,7 +16,14 @@ from sqlalchemy.future import select
 from api.crud.user import get_user_by_email
 from api.exceptions import WebSocketValidationException
 from api.models.token import BlacklistedToken
-from utils.config import ACCESS_TOKEN_EXPIRATION_TIME, ENCRYPTION_ALGORITHM, JWT_SECRET
+from utils.config import (
+    ACCESS_TOKEN_EXPIRATION_TIME,
+    ENCRYPTION_ALGORITHM,
+    IV_LENGTH,
+    JWT_AES_KEY,
+    JWT_SECRET,
+    TAG_LENGTH,
+)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -55,7 +66,7 @@ def verify_token(token: str):
 
 
 async def get_current_user_via_websocket(websocket: WebSocket, db: AsyncSession, action: str):
-    token = websocket.query_params.get("auth")
+    token = websocket.headers.get("Sec-WebSocket-Protocol")
     if token is None:
         raise WebSocketValidationException(detail="Token is missing", action=action)
 
@@ -96,3 +107,39 @@ async def is_token_blacklisted(db: AsyncSession, token: str = "") -> bool:
     query = select(BlacklistedToken).where(BlacklistedToken.token == token)
     result = await db.execute(query)
     return result.scalars().first() is not None
+
+
+def encrypt_jwt(jwt_token):
+    # Generate a random IV
+    iv = os.urandom(IV_LENGTH)  # 12 bytes for GCM
+
+    # Create a Cipher object
+    cipher = Cipher(algorithms.AES(JWT_AES_KEY), modes.GCM(iv), backend=default_backend())
+    encryptor = cipher.encryptor()
+
+    # Encrypt the token
+    ciphertext = encryptor.update(jwt_token.encode()) + encryptor.finalize()
+
+    # Combine IV, ciphertext, and tag
+    tag = encryptor.tag  # Get the authentication tag
+    combined = iv + ciphertext + tag  # Combine them
+    return base64.b64encode(combined).decode("utf-8")
+
+
+def decrypt_jwt(encrypted_token):
+    # Decode the base64 encoded token
+    combined = base64.b64decode(encrypted_token)
+
+    # Extract IV, ciphertext, and tag
+    iv = combined[:IV_LENGTH]  # First 12 bytes are the IV
+    tag = combined[-TAG_LENGTH:]  # Last 16 bytes are the tag
+    ciphertext = combined[IV_LENGTH:-TAG_LENGTH]  # Remaining bytes are the ciphertext
+
+    # Create a Cipher object
+    cipher = Cipher(algorithms.AES(JWT_AES_KEY), modes.GCM(iv, tag), backend=default_backend())
+    decryptor = cipher.decryptor()
+
+    # Decrypt the token
+    decrypted_jwt = decryptor.update(ciphertext) + decryptor.finalize()
+
+    return decrypted_jwt.decode("utf-8")

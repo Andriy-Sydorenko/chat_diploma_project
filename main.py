@@ -13,6 +13,7 @@ from api.actions import (
     register,
     send_message,
 )
+from api.auth import decrypt_jwt
 from api.exceptions import WebSocketValidationException
 from api.schemas.chat import ChatCreate
 from api.schemas.message import MessageCreate
@@ -34,12 +35,15 @@ async def health_check():
 @app.websocket("/")
 async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_db)):
     await manager.connect(websocket)
-    print(manager.active_connections)
     try:
         while True:
-            data = await manager.get_json(websocket)
+            data: dict = await manager.get_json(websocket)
             action = data.get("action")
-            token = websocket.query_params.get("auth")
+            encrypted_token = data.pop("token", "")
+            if encrypted_token:
+                token = decrypt_jwt(encrypted_token)
+            else:
+                token = None
             try:
                 if action == WebSocketActions.REGISTER:
                     user_data = UserCreate(**data.get("data"))

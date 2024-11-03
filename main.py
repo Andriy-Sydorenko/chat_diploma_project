@@ -64,16 +64,16 @@ async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_
                     await manager.send_json(response.dict(), websocket)
 
                 elif action == WebSocketActions.GET_CHATS:
-                    response = await get_chats_list(websocket=websocket, db=db, token=token)
+                    response = await get_chats_list(db=db, token=token)
                     await manager.send_json(response.dict(), websocket)
 
                 elif action == WebSocketActions.GET_USERS:
-                    response = await get_users(websocket=websocket, db=db, token=token)
+                    response = await get_users(db=db, token=token)
                     await manager.send_json(response.dict(), websocket)
 
                 elif action == WebSocketActions.CREATE_CHAT:
                     chat_data = ChatCreate(**data.get("data"))
-                    response = await create_chat(chat_data, websocket, db, token=token)
+                    response = await create_chat(chat_data, db, token=token)
                     await manager.send_json(response.dict(), websocket)
 
                 # FIXME: Implement this action, probably will need to change architecture

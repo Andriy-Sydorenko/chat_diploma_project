@@ -36,7 +36,6 @@ from api.schemas.message import (
 )
 from api.schemas.user import MeSchema, UserCreate, UserLogin, WebsocketUserResponse
 from engine import get_db
-from managers import manager
 from utils.enums import WebSocketActions
 
 
@@ -116,9 +115,9 @@ async def logout(db: AsyncSession = Depends(get_db), token: str = Depends(oauth2
         await blacklist_token(db, token)
 
 
-async def get_chats_list(websocket, db: AsyncSession, token: str):
+async def get_chats_list(db: AsyncSession, token: str):
     await check_blacklisted_token(action=WebSocketActions.GET_CHATS, db=db, token=token)
-    user = await get_current_user_via_websocket(websocket, db=db, action=WebSocketActions.GET_CHATS)
+    user = await get_current_user_via_websocket(token=token, db=db, action=WebSocketActions.GET_CHATS)
     if not user:
         raise WebSocketValidationException(
             detail="User not found!",
@@ -127,9 +126,9 @@ async def get_chats_list(websocket, db: AsyncSession, token: str):
     return WebsocketChatResponse(data=await get_chats_for_user(user_uuid=user.uuid, db=db))
 
 
-async def get_users(websocket: WebSocket, db: AsyncSession, token: str):
+async def get_users(db: AsyncSession, token: str):
     await check_blacklisted_token(action=WebSocketActions.GET_USERS, db=db, token=token)
-    user = await get_current_user_via_websocket(websocket, db=db, action=WebSocketActions.GET_CHATS)
+    user = await get_current_user_via_websocket(token=token, db=db, action=WebSocketActions.GET_CHATS)
     if not user:
         raise WebSocketValidationException(
             detail="User not found!",
@@ -140,7 +139,7 @@ async def get_users(websocket: WebSocket, db: AsyncSession, token: str):
 
 async def send_message(data: MessageCreate, websocket: WebSocket, db: AsyncSession, token: str):
     await check_blacklisted_token(action=WebSocketActions.SEND_MESSAGE, db=db, token=token)
-    sender = await get_current_user_via_websocket(websocket=websocket, db=db, action=WebSocketActions.SEND_MESSAGE)
+    sender = await get_current_user_via_websocket(token=token, db=db, action=WebSocketActions.SEND_MESSAGE)
     if not sender:
         raise WebSocketValidationException(
             detail="Sender not found!",
@@ -171,27 +170,27 @@ async def send_message(data: MessageCreate, websocket: WebSocket, db: AsyncSessi
     await db.commit()
     await db.refresh(message)
 
-    other_participant = next(participant for participant in chat.participants if participant.id != sender.id)
-    for connection in manager.active_connections:
-        if (
-            getattr(
-                await get_current_user_via_websocket(connection, db=db, action=WebSocketActions.SEND_MESSAGE), "email"
-            )
-            == other_participant.email
-        ):
-            await manager.send_json(
-                {
-                    "action": WebSocketActions.SEND_MESSAGE,
-                    "data": {
-                        "id": message.id,
-                        "chat_id": message.chat_id,
-                        "sender_email": sender.email,
-                        "content": message.content,
-                        "sent_at": message.sent_at.isoformat(),
-                    },
-                },
-                connection,
-            )
+    # other_participant = next(participant for participant in chat.participants if participant.id != sender.id)
+    # for connection in manager.active_connections:
+    #     if (
+    #         getattr(
+    #             await get_current_user_via_websocket(connection, db=db, action=WebSocketActions.SEND_MESSAGE), "email"
+    #         )
+    #         == other_participant.email
+    #     ):
+    #         await manager.send_json(
+    #             {
+    #                 "action": WebSocketActions.SEND_MESSAGE,
+    #                 "data": {
+    #                     "id": message.id,
+    #                     "chat_id": message.chat_id,
+    #                     "sender_email": sender.email,
+    #                     "content": message.content,
+    #                     "sent_at": message.sent_at.isoformat(),
+    #                 },
+    #             },
+    #             connection,
+    #         )
 
     return WebsocketMessageCreateResponse(
         data=MessageResponse(
@@ -204,11 +203,9 @@ async def send_message(data: MessageCreate, websocket: WebSocket, db: AsyncSessi
     )
 
 
-async def create_chat(
-    data: ChatCreate, websocket: WebSocket, db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)
-):
+async def create_chat(data: ChatCreate, db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)):
     await check_blacklisted_token(action=WebSocketActions.CREATE_CHAT, db=db, token=token)
-    creator = await get_current_user_via_websocket(websocket=websocket, db=db, action=WebSocketActions.CREATE_CHAT)
+    creator = await get_current_user_via_websocket(token=token, db=db, action=WebSocketActions.CREATE_CHAT)
     if not creator:
         raise WebSocketValidationException(
             detail="Chat creator not found!",

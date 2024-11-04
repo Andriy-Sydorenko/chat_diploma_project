@@ -26,6 +26,7 @@ class User(Base):
     UniqueConstraint("nickname", name="uq_user_nickname")
 
     chats = relationship("Chat", secondary=user_chat_association, back_populates="participants")
+    messages = relationship("Message", back_populates="sender")
 
     def __repr__(self):
         """Returns string representation of model instance"""

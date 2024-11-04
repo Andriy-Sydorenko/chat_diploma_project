@@ -8,9 +8,12 @@ class MessageCreate(BaseModel):
     content: str
 
 
+class GetChatMessages(BaseModel):
+    chat_uuid: str
+
+
 class MessageResponse(BaseModel):
-    id: int
-    chat_id: int
+    chat_uuid: str
     sender_uuid: str
     content: str
     sent_at: str

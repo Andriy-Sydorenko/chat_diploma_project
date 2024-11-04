@@ -1,5 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
+from pprint import pprint
 
 import httpx
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -9,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.actions import (
     create_chat,
+    get_chat_messages,
     get_chats_list,
     get_users,
     login,
@@ -20,7 +22,7 @@ from api.actions import (
 from api.auth import decrypt_jwt
 from api.exceptions import WebSocketValidationException
 from api.schemas.chat import ChatCreate
-from api.schemas.message import MessageCreate
+from api.schemas.message import GetChatMessages, MessageCreate
 from api.schemas.user import UserCreate, UserLogin
 from engine import get_db
 from managers import manager
@@ -42,7 +44,7 @@ async def ping_pong():
         while True:
             response = await client.get("http://localhost:8000/ping")
             print(f"Health check response: {response.json()}")
-            await asyncio.sleep(50)
+            await asyncio.sleep(45)
 
 
 app = FastAPI(
@@ -77,16 +79,19 @@ async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_
             try:
                 if action == WebSocketActions.REGISTER:
                     user_data = UserCreate(**data.get("data"))
-                    response = await register(user_data, db)
+                    response = await register(user_data, db, websocket)
+                    pprint(manager.socket_to_user)
+
                     await manager.send_json(response.dict(), websocket)
 
                 elif action == WebSocketActions.LOGIN:
                     login_form = UserLogin(**data.get("data"))
-                    response = await login(login_form, db)
+                    response = await login(login_form, db, websocket)
+                    pprint(manager.socket_to_user)
                     await manager.send_json(response.dict(), websocket)
 
                 elif action == WebSocketActions.LOGOUT:
-                    await logout(token=token, db=db)
+                    await logout(websocket, token=token, db=db)
                     await websocket.send_json({"status": ResponseStatuses.OK, "message": "Successful logout!"})
 
                 elif action == WebSocketActions.ME:
@@ -105,15 +110,15 @@ async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_
                     chat_data = ChatCreate(**data.get("data"))
                     response = await create_chat(chat_data, db, token=token)
                     await manager.send_json(response.dict(), websocket)
-
-                # FIXME: Implement this action, probably will need to change architecture
-                elif action == WebSocketActions.SEND_MESSAGE:
-                    message_data = MessageCreate(**data.get("data"))
-                    response = await send_message(message_data, websocket, db, token)
+                elif action == WebSocketActions.GET_CHAT_MESSAGES:
+                    chat_messages_data = GetChatMessages(**data.get("data"))
+                    response = await get_chat_messages(chat_messages_data, db, token=token)
                     await manager.send_json(response.dict(), websocket)
 
-                elif action == WebSocketActions.GET_CHAT_MESSAGES:
-                    raise NotImplementedError
+                elif action == WebSocketActions.SEND_MESSAGE:
+                    message_data = MessageCreate(**data.get("data"))
+                    response = await send_message(message_data, db, token)
+                    await manager.send_json(response.dict(), websocket)
 
             except ValidationError as exc:
                 action = SCHEMA_TO_ACTION_MAPPER.get(exc.title)
@@ -126,4 +131,5 @@ async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_
                 await manager.send_json(ws_exc.to_dict(), websocket)
 
     except WebSocketDisconnect:
+        manager.socket_to_user.pop(websocket, None)
         manager.disconnect(websocket)

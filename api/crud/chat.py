@@ -2,8 +2,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from api.models import Chat, User
+from api.models import Chat, Message, User
 from api.schemas.chat import ChatListResponse
+from api.schemas.message import MessageResponse
 
 
 async def get_chats_for_user(user_uuid: int, db: AsyncSession) -> list[ChatListResponse]:
@@ -26,3 +27,23 @@ async def get_chats_for_user(user_uuid: int, db: AsyncSession) -> list[ChatListR
         )
 
     return chat_responses
+
+
+async def get_chat_messages(chat_uuid: str, db: AsyncSession):
+    chat = await db.execute(
+        select(Chat).options(selectinload(Chat.messages).selectinload(Message.sender)).where(Chat.uuid == chat_uuid)
+    )
+    chat = chat.scalars().first()
+    if not chat:
+        return None
+
+    messages = chat.messages
+    return [
+        MessageResponse(
+            chat_uuid=str(chat.uuid),
+            sender_uuid=str(message.sender.uuid),
+            content=message.content,
+            sent_at=message.sent_at.isoformat(),
+        )
+        for message in messages
+    ]

@@ -30,7 +30,7 @@ class Chat(Base):
     id = Column(Integer, primary_key=True, index=True, nullable=False)
     uuid = Column(UUID(as_uuid=True), default=uuid.uuid4, unique=True, nullable=False, index=True)
     name = Column(String, nullable=True)  # For group chats
-    is_group = Column(Boolean, default=False)
+    is_group = Column(Boolean, default=False)  # For group chats
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     participants = relationship("User", secondary=user_chat_association, back_populates="chats")
@@ -44,13 +44,14 @@ class Message(Base):
     __tablename__ = "messages"
 
     id = Column(Integer, primary_key=True, index=True, nullable=False)
-    chat_id = Column(Integer, ForeignKey("chats.id"), nullable=False)
-    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    chat_uuid = Column(UUID(as_uuid=True), ForeignKey("chats.uuid"), nullable=False)
+    sender_uuid = Column(UUID(as_uuid=True), ForeignKey("users.uuid"), nullable=False)
+    uuid = Column(UUID(as_uuid=True), default=uuid.uuid4, unique=True, nullable=False, index=True)
     content = Column(Text, nullable=False)
-    sent_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    sent_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     chat = relationship("Chat", back_populates="messages")
     sender = relationship("User")
 
     def __repr__(self):
-        return f"<Message {self.id} in Chat {self.chat_id}>"
+        return f"<Message {self.id} in Chat {self.chat_uuid}>"

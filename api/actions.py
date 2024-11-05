@@ -195,7 +195,9 @@ async def send_message(data: MessageCreate, db: AsyncSession, token: str):
     other_participant_websocket = next(
         (ws for ws, uuid in manager.socket_to_user.items() if uuid == other_participant.uuid), None
     )
+    print(f"{manager.socket_to_user.items()=}")
     if other_participant_websocket:
+        print(f"DONE: {other_participant_websocket=}")
         await manager.send_json(
             {
                 "action": WebSocketActions.NEW_MESSAGE_RECEIVED,

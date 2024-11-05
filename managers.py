@@ -1,5 +1,5 @@
 import uuid
-from typing import Dict, Optional
+from typing import Dict
 
 from fastapi import WebSocket
 
@@ -7,12 +7,11 @@ from fastapi import WebSocket
 class ConnectionManager:
     def __init__(self) -> None:
         self.active_connections: list[WebSocket] = []
-        self.socket_to_user: Dict[WebSocket, Optional[uuid.UUID]] = {}
+        self.socket_to_user: Dict[WebSocket, uuid.UUID] = {}
 
     async def connect(self, websocket: WebSocket) -> None:
         await websocket.accept()
         self.active_connections.append(websocket)
-        self.socket_to_user[websocket] = None
 
     @staticmethod
     async def get_json(websocket: WebSocket):

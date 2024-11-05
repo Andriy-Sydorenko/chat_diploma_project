@@ -63,9 +63,10 @@ async def register(user_create: UserCreate, db: AsyncSession, websocket: WebSock
     manager.socket_to_user[websocket] = registered_user.uuid
 
     return AuthResponse(
+        action=WebSocketActions.REGISTER,
         data=RegisterData(
             access_token=encrypted_token,
-        )
+        ),
     )
 
 
@@ -83,9 +84,10 @@ async def login(login_form: UserLogin, db: AsyncSession, websocket: WebSocket):
     manager.socket_to_user[websocket] = user.uuid
 
     return AuthResponse(
+        action=WebSocketActions.LOGIN,
         data=LoginData(
             access_token=encrypted_token,
-        )
+        ),
     )
 
 
@@ -106,7 +108,9 @@ async def me(db: AsyncSession, token: str = Depends(oauth2_scheme)):
             action=WebSocketActions.ME,
         )
 
-    return AuthResponse(data=MeSchema(email=user.email, nickname=user.nickname, user_uuid=str(user.uuid)))
+    return AuthResponse(
+        action=WebSocketActions.ME, data=MeSchema(email=user.email, nickname=user.nickname, user_uuid=str(user.uuid))
+    )
 
 
 async def logout(websocket: WebSocket, db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)):
@@ -133,7 +137,10 @@ async def get_chats_list(db: AsyncSession, token: str):
             detail="User not found!",
             action=WebSocketActions.GET_CHATS,
         )
-    return WebsocketChatResponse(data={"chats": await chat_crud.get_chats_for_user(user_uuid=user.uuid, db=db)})
+    return WebsocketChatResponse(
+        action=WebSocketActions.GET_CHATS,
+        data={"chats": await chat_crud.get_chats_for_user(user_uuid=user.uuid, db=db)},
+    )
 
 
 async def get_users(db: AsyncSession, token: str):
@@ -145,7 +152,10 @@ async def get_users(db: AsyncSession, token: str):
             detail="User not found!",
             action=WebSocketActions.GET_USERS,
         )
-    return WebsocketUserResponse(data={"users": await user_crud.get_users_list(request_user_uuid=user.uuid, db=db)})
+    return WebsocketUserResponse(
+        action=WebSocketActions.GET_USERS,
+        data={"users": await user_crud.get_users_list(request_user_uuid=user.uuid, db=db)},
+    )
 
 
 async def send_message(data: MessageCreate, db: AsyncSession, token: str):
@@ -201,12 +211,13 @@ async def send_message(data: MessageCreate, db: AsyncSession, token: str):
         )
 
     return WebsocketMessageCreateResponse(
+        action=WebSocketActions.SEND_MESSAGE,
         data=MessageResponse(
             chat_uuid=str(message.chat_uuid),
             sender_uuid=str(sender.uuid),
             content=message.content,
             sent_at=message.sent_at.isoformat(),
-        )
+        ),
     )
 
 
@@ -254,12 +265,13 @@ async def create_chat(data: ChatCreate, db: AsyncSession = Depends(get_db), toke
     await db.refresh(chat)
 
     return WebsocketChatCreateResponse(
+        action=WebSocketActions.CREATE_CHAT,
         data=ChatListResponse(
             uuid=str(chat.uuid),
             participants=[str(creator.uuid), str(participant.uuid)],
             created_at=chat.created_at.isoformat(),
             display_name=participant.nickname,
-        )
+        ),
     )
 
 
@@ -267,4 +279,4 @@ async def get_chat_messages(chat_messages_data: GetChatMessages, db: AsyncSessio
     await check_blacklisted_token(action=WebSocketActions.CREATE_CHAT, db=db, token=token)
     chat_messages = await chat_crud.get_chat_messages(chat_uuid=chat_messages_data.chat_uuid, db=db)
 
-    return WebsocketMessagesResponse(data=chat_messages)
+    return WebsocketMessagesResponse(action=WebSocketActions.GET_CHAT_MESSAGES, data=chat_messages)

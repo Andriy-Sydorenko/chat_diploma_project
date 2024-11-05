@@ -92,7 +92,13 @@ async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_
 
                 elif action == WebSocketActions.LOGOUT:
                     await logout(websocket, token=token, db=db)
-                    await websocket.send_json({"status": ResponseStatuses.OK, "message": "Successful logout!"})
+                    await websocket.send_json(
+                        {
+                            "status": ResponseStatuses.OK,
+                            "action": WebSocketActions.LOGOUT,
+                            "message": "Successful logout!",
+                        }
+                    )
 
                 elif action == WebSocketActions.ME:
                     response = await me(token=token, db=db)

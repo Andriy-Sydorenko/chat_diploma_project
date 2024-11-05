@@ -43,6 +43,7 @@ class UserLogin(EmailPasswordValidation):
 class MeSchema(BaseModel):
     email: str
     nickname: str
+    user_uuid: str
 
 
 class UserListResponse(BaseModel):

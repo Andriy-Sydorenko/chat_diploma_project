@@ -106,7 +106,7 @@ async def me(db: AsyncSession, token: str = Depends(oauth2_scheme)):
             action=WebSocketActions.ME,
         )
 
-    return AuthResponse(data=MeSchema(email=user.email, nickname=user.nickname))
+    return AuthResponse(data=MeSchema(email=user.email, nickname=user.nickname, user_uuid=str(user.uuid)))
 
 
 async def logout(websocket: WebSocket, db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)):

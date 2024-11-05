@@ -133,8 +133,8 @@ async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_
                 detail = str(error.get("ctx").get("error"))
                 wc_validation_exception = WebSocketValidationException(action=action, detail=detail, field=field)
                 await manager.send_json(wc_validation_exception.to_dict(), websocket)
-            except WebSocketValidationException as ws_exc:
-                await manager.send_json(ws_exc.to_dict(), websocket)
+    except WebSocketValidationException as ws_exc:
+        await manager.send_json(ws_exc.to_dict(), websocket)
 
     except WebSocketDisconnect:
         manager.socket_to_user.pop(websocket, None)

@@ -215,6 +215,7 @@ async def send_message(data: MessageCreate, db: AsyncSession, token: str):
         data=MessageResponse(
             chat_uuid=str(message.chat_uuid),
             sender_uuid=str(sender.uuid),
+            sender_nickname=sender.nickname,
             content=message.content,
             sent_at=message.sent_at.isoformat(),
         ),

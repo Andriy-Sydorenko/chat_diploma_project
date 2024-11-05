@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from secrets import token_urlsafe
 
 import jwt
+from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from fastapi.security import OAuth2PasswordBearer
@@ -138,6 +139,12 @@ def decrypt_jwt(encrypted_token):
     decryptor = cipher.decryptor()
 
     # Decrypt the token
-    decrypted_jwt = decryptor.update(ciphertext) + decryptor.finalize()
+    try:
+        decrypted_jwt = decryptor.update(ciphertext) + decryptor.finalize()
+    except InvalidTag:
+        raise WebSocketValidationException(
+            detail="An exception was raised when trying to decrypt JWT!",
+            action="ANY",
+        )
 
     return decrypted_jwt.decode("utf-8")

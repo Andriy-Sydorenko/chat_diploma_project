@@ -42,6 +42,7 @@ async def get_chat_messages(chat_uuid: str, db: AsyncSession):
         MessageResponse(
             chat_uuid=str(chat.uuid),
             sender_uuid=str(message.sender.uuid),
+            sender_nickname=message.sender.nickname,
             content=message.content,
             sent_at=message.sent_at.isoformat(),
         )

@@ -15,6 +15,7 @@ class GetChatMessages(BaseModel):
 class MessageResponse(BaseModel):
     chat_uuid: str
     sender_uuid: str
+    sender_nickname: str
     content: str
     sent_at: str
 

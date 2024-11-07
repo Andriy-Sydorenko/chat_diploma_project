@@ -27,7 +27,7 @@ from api.schemas.user import UserCreate, UserLogin
 from engine import get_db
 from managers import manager
 from utils.enums import SCHEMA_TO_ACTION_MAPPER, ResponseStatuses, WebSocketActions
-from utils.utils import cleanup_blacklisted_tokens
+from utils.utils import cleanup_blacklisted_tokens, remove_websocket_by_value
 
 
 @asynccontextmanager
@@ -137,5 +137,17 @@ async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_
         await manager.send_json(ws_exc.to_dict(), websocket)
 
     except WebSocketDisconnect:
-        manager.socket_to_user.pop(websocket, None)
+        manager.disconnect(websocket)
+
+    except Exception as exc:
+        print(f"Exception: {exc}")
+        await manager.send_json(
+            {
+                "status": ResponseStatuses.ERROR,
+                "action": "error",
+                "message": "Something went wrong.",
+            },
+            websocket,
+        )
+        remove_websocket_by_value(manager.socket_to_user, websocket)
         manager.disconnect(websocket)

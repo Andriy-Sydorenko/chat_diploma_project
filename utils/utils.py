@@ -2,7 +2,10 @@ import base64
 import hashlib
 import os
 import subprocess
+import uuid
+from typing import Dict
 
+from fastapi.websockets import WebSocket
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,3 +36,13 @@ async def cleanup_blacklisted_tokens(db: AsyncSession):
     query = delete(BlacklistedToken)
     await db.execute(query)
     await db.commit()
+
+
+def remove_websocket_by_value(socket_to_user: Dict[uuid.UUID, WebSocket], websocket: WebSocket):
+    key_to_remove = None
+    for key, value in socket_to_user.items():
+        if value == websocket:
+            key_to_remove = key
+            break
+    if key_to_remove:
+        del socket_to_user[key_to_remove]

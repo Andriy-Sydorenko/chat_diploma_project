@@ -40,6 +40,7 @@ from api.schemas.user import MeSchema, UserCreate, UserLogin, WebsocketUserRespo
 from engine import get_db
 from managers import manager
 from utils.enums import WebSocketActions
+from utils.utils import remove_websocket_by_value
 
 
 async def check_blacklisted_token(action: str, db: AsyncSession, token: str):
@@ -60,7 +61,7 @@ async def register(user_create: UserCreate, db: AsyncSession, websocket: WebSock
 
     access_token = create_jwt_token(user_create.email)
     encrypted_token = encrypt_jwt(access_token)
-    manager.socket_to_user[websocket] = registered_user.uuid
+    manager.socket_to_user[registered_user.uuid] = websocket
 
     return AuthResponse(
         action=WebSocketActions.REGISTER,
@@ -81,7 +82,7 @@ async def login(login_form: UserLogin, db: AsyncSession, websocket: WebSocket):
     access_token = create_jwt_token(user.email)
     encrypted_token = encrypt_jwt(access_token)
 
-    manager.socket_to_user[websocket] = user.uuid
+    manager.socket_to_user[user.uuid] = websocket
 
     return AuthResponse(
         action=WebSocketActions.LOGIN,
@@ -123,7 +124,7 @@ async def logout(websocket: WebSocket, db: AsyncSession = Depends(get_db), token
             action=WebSocketActions.LOGOUT,
         )
 
-    manager.socket_to_user.pop(websocket, None)
+    remove_websocket_by_value(manager.socket_to_user, websocket)
 
     if not await is_token_blacklisted(db, token):
         await blacklist_token(db, token)
@@ -193,9 +194,11 @@ async def send_message(data: MessageCreate, db: AsyncSession, token: str):
 
     other_participant = next(participant for participant in chat.participants if participant.id != sender.id)
     other_participant_websocket = next(
-        (ws for ws, uuid in manager.socket_to_user.items() if uuid == other_participant.uuid), None
+        (ws for uuid, ws in manager.socket_to_user.items() if uuid == other_participant.uuid), None
     )
+    print(f"{manager.socket_to_user.items()=}")
     if other_participant_websocket:
+        print(f"DONE: {other_participant_websocket=}")
         await manager.send_json(
             {
                 "action": WebSocketActions.NEW_MESSAGE_RECEIVED,

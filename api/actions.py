@@ -92,6 +92,25 @@ async def login(login_form: UserLogin, db: AsyncSession, websocket: WebSocket):
     )
 
 
+async def login_REST(login_form: UserLogin, db: AsyncSession):
+    user = await verify_user(db, login_form.email, login_form.password)
+    if not user:
+        raise WebSocketValidationException(
+            detail="Incorrect username or password!",
+            action=WebSocketActions.LOGIN,
+        )
+
+    access_token = create_jwt_token(user.email)
+    encrypted_token = encrypt_jwt(access_token)
+
+    return AuthResponse(
+        action=WebSocketActions.LOGIN,
+        data=LoginData(
+            access_token=encrypted_token,
+        ),
+    )
+
+
 async def me(db: AsyncSession, token: str = Depends(oauth2_scheme)):
     await check_blacklisted_token(action=WebSocketActions.ME, db=db, token=token)
     try:

@@ -11,6 +11,7 @@ load_dotenv()
 
 env = EnvParser()
 IS_DEPLOY_BRANCH = get_git_branch_name() == "deploy"
+ALLOWED_ORIGINS = ["http://localhost", "https://chat-group-frontend.vercel.app"]
 
 if IS_DEPLOY_BRANCH:
     DATABASE_URL = env.str("PRODUCTION_DATABASE_URL")

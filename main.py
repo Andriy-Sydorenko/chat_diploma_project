@@ -1,6 +1,5 @@
 import asyncio
 from contextlib import asynccontextmanager
-from pprint import pprint
 
 import httpx
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -14,6 +13,7 @@ from api.actions import (
     get_chats_list,
     get_users,
     login,
+    login_REST,
     logout,
     me,
     register,
@@ -27,6 +27,7 @@ from api.schemas.user import UserCreate, UserLogin
 from engine import get_db
 from managers import manager
 from utils.enums import SCHEMA_TO_ACTION_MAPPER, ResponseStatuses, WebSocketActions
+from utils.rate_limiter import RateLimiter
 from utils.utils import cleanup_blacklisted_tokens, remove_websocket_by_value
 
 
@@ -42,8 +43,7 @@ async def lifespan(app: FastAPI):
 async def ping_pong():
     async with httpx.AsyncClient() as client:
         while True:
-            response = await client.get("http://localhost:8000/ping")
-            print(f"Health check response: {response.json()}")
+            await client.get("http://localhost:8000/ping")
             await asyncio.sleep(45)
 
 
@@ -52,16 +52,17 @@ app = FastAPI(
 )
 
 
-@app.get("/")
-async def health_check():
-    return {
-        "status": "OK",
-    }
-
-
 @app.get("/ping")
 async def ping():
     return {"message": "pong"}
+
+
+@app.post("/login")
+async def login_endpoint(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
+    return await login_REST(user_data, db)
+
+
+rate_limiter = RateLimiter(rate=100, per=60)
 
 
 @app.websocket("/")
@@ -69,6 +70,17 @@ async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_
     await manager.connect(websocket)
     try:
         while True:
+            if not rate_limiter.is_allowed(websocket.client.host):
+                await manager.send_json(
+                    {
+                        "status": ResponseStatuses.ERROR,
+                        "action": "rate_limit_exceeded",
+                        "message": "Rate limit exceeded. Please try again later.",
+                    },
+                    websocket,
+                )
+                break
+
             data: dict = await manager.get_json(websocket)
             action = data.get("action")
             encrypted_token = data["data"].pop("token", "")
@@ -80,14 +92,11 @@ async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_
                 if action == WebSocketActions.REGISTER:
                     user_data = UserCreate(**data.get("data"))
                     response = await register(user_data, db, websocket)
-                    pprint(manager.socket_to_user)
-
                     await manager.send_json(response.dict(), websocket)
 
                 elif action == WebSocketActions.LOGIN:
                     login_form = UserLogin(**data.get("data"))
                     response = await login(login_form, db, websocket)
-                    pprint(manager.socket_to_user)
                     await manager.send_json(response.dict(), websocket)
 
                 elif action == WebSocketActions.LOGOUT:
@@ -139,8 +148,7 @@ async def check_connection(websocket: WebSocket, db: AsyncSession = Depends(get_
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
-    except Exception as exc:
-        print(f"Exception: {exc}")
+    except Exception:
         await manager.send_json(
             {
                 "status": ResponseStatuses.ERROR,
